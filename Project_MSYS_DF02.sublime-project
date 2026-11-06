@@ -1,0 +1,15 @@
+//visualizzo due DIRECTORY PRINCIPALI
+{
+    "folders":
+    [
+        {
+            "path": ".",
+//."
+        },
+    ],
+    /*"settings":
+    {
+        "show_folder_icons": true,
+        "save_on_focus_lost": true
+    }*/
+}
