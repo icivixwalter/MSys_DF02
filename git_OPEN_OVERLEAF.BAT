@@ -1,5 +1,5 @@
 @REM  cd.. devi posizionarti su git_desktop
-CD c:CASAinguaggiaccessprogetti_mdbmsysmsys_df02\
+cd /d "%~dp0"
 
 dir 
 

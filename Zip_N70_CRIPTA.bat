@@ -55,7 +55,7 @@
 			@REM CICLO FOR I E II CASO PER LA GESTIONE DELLA DATA
 			@REM ========================================================================================================================
 			:----------------------------CICLO FOR I CASO per la gestione della data con le sottostringhe ma aggiunge lo 0 se <10
-			for /f "skip=1" %%x in ('wmic os get localdatetime') do if not defined MyDate set MyDate=%%x
+			for /f "delims=" %%x in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMddHHmmss"') do if not defined MyDate set MyDate=%%x
 			echo solo il giorno:
 			echo %MyDate:~6,2%
 

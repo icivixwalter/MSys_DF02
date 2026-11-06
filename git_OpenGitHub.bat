@@ -1,3 +1,3 @@
-
-start https://github.com/icivixwalter/Msys_TB30_UTIL
-
+@echo off
+REM START SU GITHUB WEB
+start https://github.com/icivixwalter/MSys_DF02

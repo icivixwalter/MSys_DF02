@@ -1,24 +1,12 @@
-@REM  cd.. devi posizionarti su git_desktop
-CD c:CASAinguaggiaccessprogetti_mdbmsysmsys_df02\
-dir 
-
-@REM  fai un controllo con status, poi aggiungi con add tutto l'albero + il comimit e il push
-git status
-
-ECHO pausa di 3 secondi per il controllo
-@TIMEOUT /T 3 /NOBREAK
-
-
-git pull 
-
-@rem pausa per consentire il commit
-
-@REM 01)
-@REM sospensione per 1 secondo con crononometro 
-@REM ---->	timeout /t 2 /nobreak > NUL
-@REM ---->
-ECHO
-ECHO
-ECHO  pausa di 5 secondi per consentire il commit
-ECHO
-@TIMEOUT /T 5 /NOBREAK
+@echo off
+REM si posiziona da solo nella cartella del repository (quella di questo bat)
+cd /d "%~dp0"
+git rev-parse --is-inside-work-tree >nul 2>&1 || (echo *** ERRORE: %CD% non e' un repository git & pause & exit /b 1)
+echo REPOSITORY: %CD%
+echo.
+echo === PULL: scarico le modifiche da GitHub ===
+git pull --no-edit
+if errorlevel 1 (echo. & echo *** ERRORE PULL: leggere i messaggi sopra *** & pause & exit /b 1)
+echo.
+echo === PULL COMPLETATO ===
+pause

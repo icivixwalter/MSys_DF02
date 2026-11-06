@@ -1,102 +1,161 @@
-@REM  cd.. devi posizionarti su git_desktop
-CD c:CASAinguaggiaccessprogetti_mdbmsysmsys_df02\
-dir 
-
-
-
-@ECHO   fai un controllo con status, poi aggiungi con add tutto l'albero + il PULL + IL  COMMITT e il PUSH
-git status
-git pull
-
-@ECHO pausa  per il controllo status ed il pull
-@TIMEOUT /T 5 /NOBREAK
-
-
-
-
-@CLS
-@ECHO CICLO FOR I E II CASO PER LA GESTIONE DELLA DATA
-@ECHO ========================================================================================================================
-
-@REM Spiegazione:
-@REM wmic os get localdatetime: Ottiene la data e l'ora correnti in formato YYYYMMDDHHMMSS.milliseconds.
-@REM for /f: Elabora l'output per estrarre la data e l'ora.
-@REM Saltiamo la prima riga (skip=1) perché contiene solo l'intestazione.
-@REM La variabile %MyDate% viene impostata con il valore YYYYMMDDHHMMSS.
-@REM Parsing dei dati:
-@REM Anno: %MyDate:~0,4%
-@REM Mese: %MyDate:~4,2%
-@REM Giorno: %MyDate:~6,2%
-@REM Ora: %MyDate:~8,2%
-@REM Minuti: %MyDate:~10,2%
-@REM Secondi: %MyDate:~12,2%
-@REM Output Finale:
-@REM Combina anno, mese, giorno, ora, minuti e secondi in un formato leggibile: YYYY_MM_DD_HH_MM_SS.
-@REM Esempio di Output:
-@REM Se la data e l'ora corrente sono 16 gennaio 2025, 14:30:45, l'output sarà:
-
-@REM Copia
-@REM Modifica
-@REM 2025_01_16_14_30_45
-@REM Nota:
-@REM Questo codice funziona in ambienti Windows con WMIC disponibile.
-@REM In versioni più recenti di Windows (come Windows 11), 
-@REM WMIC potrebbe essere deprecato. In tal caso, è necessario utilizzare un'alternativa come PowerShell 
-@REM per ottenere la data e l'ora. 
-
 @echo off
-@ECHO.
-@ECHO.
-for /f "skip=1" %%x in ('wmic os get localdatetime') do if not defined MyDate set MyDate=%%x
-set today=%MyDate:~0,4%_%MyDate:~4,2%_%MyDate:~6,2%_H%MyDate:~8,2%_M%MyDate:~10,2%_S%MyDate:~12,2%
-echo %today%
+setlocal
+REM ====================================================================
+REM  NOME FILE : git_STATUS+PULL+ADD+COMMIT+PUSH.BAT
+REM  SCOPO     : allineare il repository locale con GitHub in un colpo solo
+REM              (salva le modifiche locali, scarica quelle dell'altro PC,
+REM               invia tutto su GitHub) scrivendo un LOG passo passo.
+REM  REPOSITORY: la cartella di questo bat
+REM              (C:\CASA\LINGUAGGI\ACCESS\PROGETTI_MDB\MSYS\MSys_DF02)
+REM              il bat si posiziona da solo: basta il doppio clic.
+REM  LOG       : git_LOG.txt  (aggiunto in coda ad ogni esecuzione,
+REM              resta solo sul PC: e' escluso nel .gitignore)
+REM ====================================================================
+REM
+REM  FLUSSO DEI PASSI
+REM  --------------------------------------------------------------------
+REM  PASSO 0 - CONTROLLO REPOSITORY      comando: git rev-parse --show-toplevel
+REM            Verifica che la cartella sia un repository git.
+REM            Se NON lo e': ERRORE e il bat si ferma.
+REM
+REM  PASSO 1 - STATUS                     comando: git status -s
+REM            Mostra i file modificati, nuovi o cancellati.
+REM            Solo informativo: non modifica nulla e non ferma il bat.
+REM
+REM  PASSO 2a - ADD                       comando: git add -A
+REM            Prepara per il commit TUTTE le modifiche del repository
+REM            (file modificati, file nuovi e file cancellati).
+REM
+REM  PASSO 2b - COMMIT                    comando: git commit -m "AAAA_MM_GG_Hhh_Mmm_Sss_aggiornamento_MSYS"
+REM            Salva le modifiche nella storia LOCALE.
+REM            Se non c'e' nulla da salvare scrive "commit non necessario"
+REM            e prosegue senza errori.
+REM
+REM  PASSO 3 - PULL                       comando: git pull --no-edit
+REM            Scarica da GitHub le modifiche fatte sull'altro PC
+REM            (casa/ufficio) e le unisce alle nostre.
+REM            Viene DOPO il commit: cosi' le modifiche locali sono gia'
+REM            salvate e l'unione non viene rifiutata.
+REM            Se ci sono CONFLITTI: ERRORE e il bat si ferma (niente push).
+REM
+REM  PASSO 4 - PUSH                       comando: git push
+REM            Invia su GitHub i commit locali.
+REM            Se GitHub lo rifiuta: ERRORE e il bat si ferma.
+REM
+REM  DATA DEL COMMIT: calcolata con PowerShell (Get-Date), perche' WMIC
+REM  non esiste piu' nelle versioni recenti di Windows 11.
+REM
+REM  PASSO 5 - STATO FINALE               comando: git status -sb
+REM            "## main...origin/main" senza altro = tutto allineato.
+REM
+REM  ESITO
+REM  --------------------------------------------------------------------
+REM  - per ogni passo il log riporta: ora, COMANDO, risposta di git
+REM    ed  "ESITO: OK"  oppure  "ESITO: ERRORE - codice N"
+REM  - alla fine:  "ESITO FINALE: TUTTO OK"  oppure  "*** ERRORE ***"
+REM  - in caso di errore il bat salta i passi successivi e apre il log
+REM    nel Blocco note
+REM
+REM  ROUTINE INTERNE (in fondo al file)
+REM  --------------------------------------------------------------------
+REM  :esegui "TITOLO" comando  -- esegue il comando, lo mostra a video,
+REM                               lo scrive nel log con il suo esito
+REM  :scrivi "testo"           -- scrive una riga a video e nel log
+REM ====================================================================
+set "LOG=%~dp0git_LOG.txt"
+set "TMPOUT=%TEMP%\git_bat_output.tmp"
+set "ESITO=OK"
 
+cd /d "%~dp0"
 
+REM data nel formato AAAA_MM_GG_Hhh_Mmm_Sss (senza WMIC)
+set "today="
+for /f "delims=" %%i in ('powershell -NoProfile -Command "Get-Date -Format yyyy_MM_dd_\HHH_\Mmm_\Sss"') do set "today=%%i"
+if not defined today set "today=SENZA_DATA"
 
-:----------------------------CICLO FOR I CASO per la gestione della data con le sottostringhe ma aggiunge lo 0 se <10
-REM for /f "skip=1" %%x in ('wmic os get localdatetime') do if not defined MyDate set MyDate=%%x
-REM set today=%MyDate:~0,4%_%MyDate:~4,2%_%MyDate:~6,2%
-REM echo %today%
+call :scrivi ""
+call :scrivi "################################################################"
+call :scrivi "### INIZIO  %date%  %time:~0,8%"
+call :scrivi "### PC: %COMPUTERNAME%   UTENTE: %USERNAME%"
+call :scrivi "### REPOSITORY: %CD%"
+call :scrivi "################################################################"
 
+call :esegui "0) CONTROLLO REPOSITORY" git rev-parse --show-toplevel || goto :errore
+call :esegui "1) STATUS" git status -s
+call :esegui "2a) ADD di tutte le modifiche" git add -A || goto :errore
 
-					@REM SOSPENSIONE TEMPO IMPOSTATA CON T
-					@REM ---->	timeout /t 2 /nobreak > NUL
-					@REM ---->	
-					REM @TIMEOUT /T 2 /NOBREAK
-					@REM Pause
+git diff --cached --quiet
+if errorlevel 1 (
+   call :esegui "2b) COMMIT" git commit -m "%today%_aggiornamento_MSYS" || goto :errore
+) else (
+   call :scrivi ""
+   call :scrivi "=== 2b) COMMIT"
+   call :scrivi "    Nessuna modifica locale da salvare: commit non necessario."
+   call :scrivi "    ESITO: OK"
+)
 
-:----------------------------CICLO FOR  II CASO cicolo for per per la data AAA MM GG senza sottostringhe
+call :esegui "3) PULL da GitHub" git pull --no-edit || goto :errore
+call :esegui "4) PUSH su GitHub" git push || goto :errore
+call :esegui "5) STATO FINALE" git status -sb
 
+call :scrivi ""
+call :scrivi "################################################################"
+call :scrivi "### ESITO FINALE: TUTTO OK - repository allineato con GitHub"
+call :scrivi "### FINE  %date%  %time:~0,8%"
+call :scrivi "################################################################"
+echo.
+echo Log salvato in: %LOG%
+pause
+exit /b 0
 
-ECHO.
-ECHO. 
-git add .
-git commit -m "%today%_aggiornamento_MSYS"
+:errore
+call :scrivi ""
+call :scrivi "################################################################"
+call :scrivi "### ESITO FINALE: *** ERRORE *** operazione interrotta"
+call :scrivi "### Leggere sopra il comando con ESITO: ERRORE"
+call :scrivi "### FINE  %date%  %time:~0,8%"
+call :scrivi "################################################################"
+echo.
+echo Log salvato in: %LOG%  (si apre ora nel Blocco note)
+start "" notepad "%LOG%"
+pause
+exit /b 1
 
+REM ------------------------------------------------------------
+REM  :esegui "TITOLO" comando...  -> esegue, mostra, registra, esito
+REM ------------------------------------------------------------
+:esegui
+set "TITOLO=%~1"
+shift
+set "CMD="
+:esegui_args
+if "%~1"=="" goto :esegui_run
+set "CMD=%CMD% %1"
+shift
+goto :esegui_args
+:esegui_run
+call :scrivi ""
+call :scrivi "=== %TITOLO%   [%time:~0,8%]"
+echo(    COMANDO:%CMD%
+>> "%LOG%" echo(    COMANDO:%CMD%
+%CMD% > "%TMPOUT%" 2>&1
+set "RC=%errorlevel%"
+type "%TMPOUT%"
+type "%TMPOUT%" >> "%LOG%"
+if "%RC%"=="0" call :scrivi "    ESITO: OK"
+if not "%RC%"=="0" call :scrivi "    ESITO: ERRORE - codice %RC%"
+del "%TMPOUT%" >nul 2>&1
+exit /b %RC%
 
-ECHO. 
-ECHO. 
-@ECHO ========================================================================================================================
-
-
-
-
-
-@REM 01)
-@REM sospensione per 1 secondo con crononometro 
-@REM ---->	timeout /t 2 /nobreak > NUL
-@REM ---->
-ECHO
-ECHO
-ECHO  pausa  per consentire il commit
-ECHO
-@TIMEOUT /T 5 /NOBREAK
-
-git push
-
-
-@rem pausa di 5 secondi per il controllo
-ECHO
-
-ECHO pausa di 5 secondi per il controllo
-@TIMEOUT /T 5 /NOBREAK
+REM ------------------------------------------------------------
+REM  :scrivi "testo"  -> scrive a video e nel log
+REM ------------------------------------------------------------
+:scrivi
+if "%~1"=="" goto :scrivi_vuoto
+echo(%~1
+>> "%LOG%" echo(%~1
+exit /b 0
+:scrivi_vuoto
+echo.
+>> "%LOG%" echo.
+exit /b 0
